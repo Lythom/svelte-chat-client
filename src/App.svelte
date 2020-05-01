@@ -2,49 +2,31 @@
     import Subscribe from "./Subscribe.svelte";
     import Login from "./Login.svelte";
     import Chat from "./Chat.svelte";
-
-    export let API_SERVER;
-    export let WS_SERVER;
+    import * as backendAPI from "./api.js"
 
     let login;
     let password;
     let email;
-    let chatActive = false;
     let feedback = '';
-    let messages = ['Début du chat'];
 
     let ws;
-    let chatInput;
-    let chatInputValue;
+    let chatActive = false;
+    let connecting = false;
 
     async function autoLogin() {
-        const response = await fetch(`${API_SERVER}/status`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
+        connecting = true
+        const response = await backendAPI.status()
         const responseValue = await response.text();
         if (responseValue !== 'Visiteur') {
-            connectToChat();
+            await connectToChat();
         }
+        connecting = false
     }
 
     autoLogin();
 
     async function handleSubscribe() {
-        const response = await fetch(`${API_SERVER}/subscribe`, {
-            method: 'POST',
-            body: JSON.stringify({
-                "username": login,
-                "password": password,
-                "email": email,
-            }),
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include'
-        });
+        const response = await backendAPI.subscribe(login, password, email);
         const registerResponseValue = await response.text();
         if (!registerResponseValue.ok) {
             feedback = registerResponseValue;
@@ -54,41 +36,8 @@
         password = '';
     }
 
-    async function connectToChat() {
-        const ticketResponse = await fetch(`${API_SERVER}/wsTicket`, {
-            method: 'GET',
-            credentials: 'include'
-        });
-
-        const ticketResponseValue = await ticketResponse.text();
-        if (ticketResponse.ok) {
-            ws = new WebSocket(WS_SERVER);
-            ws.addEventListener('open', () => {
-                ws.send(ticketResponseValue);
-                chatActive = true;
-                password = '';
-                chatInput.focus();
-                feedback = "Connecté !"
-            });
-            ws.addEventListener('message', handleServerWSMessage)
-            feedback = "Connexion au serveur en cours…";
-        } else {
-            feedback = ticketResponseValue;
-        }
-    }
-
     async function handleLogin() {
-        const loginResponse = await fetch(`${API_SERVER}/login`, {
-            method: 'POST',
-            body: JSON.stringify({
-                "username": login,
-                "password": password
-            }),
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include'
-        });
+        const loginResponse = await backendAPI.login(login, password);
         const loginResponseValue = await loginResponse.text();
         if (loginResponseValue.ok) {
             feedback = loginResponseValue;
@@ -98,21 +47,60 @@
         await connectToChat();
     }
 
-    function handleChatMessage() {
-        ws.send(chatInputValue);
-        chatInputValue = '';
-        chatInput.focus();
+    async function connectToChat() {
+        connecting = true
+        feedback = "Connexion au serveur en cours…";
+        const ticketResponse = await backendAPI.wsTicket()
+        const ticketResponseValue = await ticketResponse.text();
+        if (ticketResponse.ok) {
+            ws = await backendAPI.startWebsocket(ticketResponseValue, handleWSMessage, disconnect);
+            password = '';
+            feedback = "Connecté !"
+            chatActive = true;
+        } else {
+            feedback = ticketResponseValue;
+        }
+        connecting = false
     }
 
-    function handleServerWSMessage(msg) {
-        messages = [...messages, msg.data];
+    function sendWSMessage(msg) {
+        ws.send(msg)
     }
 
     function disconnect() {
         chatActive = false;
-        ws.close();
+        if (ws != null) ws.close();
         feedback = 'Disconnected'
     }
+
+    async function logout() {
+        disconnect()
+        await backendAPI.logout()
+    }
+
+
+    //// SUBSCRIPTION example here
+    // 1. register a handler to be notified by event (here it's handleWSMessage)
+    // 2. give child component a function that allow it to register it's own callback (here it's subscribeToMessages)
+    // 3. When the child subscribe, keep the reference to the child handler (here in childChatHandler, could be an array to handle multiple child subscriptions)
+
+    // keep the callback function that the Chat component want the App to use when a new message arrive
+    let childChatHandler;
+
+    // handleWSMessage is called when a message arrive, it is registered as callback on the websocket
+    function handleWSMessage(msg) {
+        if (childChatHandler != null) childChatHandler(msg)
+    }
+
+    // this function is given to the Chat component so that it can tell the app what callback function the App should use.
+    function subscribeToMessages(handler) {
+        childChatHandler = handler
+        // a subcription function often return an unsubscription function. Alternatively an "unsubscribe" function can be provided in another way.
+        return () => childChatHandler = null
+    }
+
+    //
+    //// END of SUBSCRIPTION example
 </script>
 
 <main>
@@ -120,7 +108,7 @@
         <h1>My Chat</h1>
         <ul style="display: {chatActive ? 'block' : 'none'}">
             <li>
-                <button on:click={disconnect}><i>Disconnect</i></button>
+                <button on:click={logout}><i>Disconnect</i></button>
             </li>
         </ul>
     </nav>
@@ -131,16 +119,16 @@
         </article>
         <br/>
     {/if}
-    {#if !chatActive}
+    {#if !chatActive && !connecting}
         <section>
-            <Subscribe onSubscribe={handleSubscribe} bind:login bind:password bind:email />
+            <Subscribe onSubscribe={handleSubscribe} bind:login bind:password bind:email/>
             <div style="padding-left: 2rem">
-                <Login onLogin={handleLogin} bind:login bind:password />
+                <Login onLogin={handleLogin} bind:login bind:password/>
             </div>
         </section>
     {/if}
-    <section>
-        <Chat chatActive={chatActive} bind:chatInput={chatInput} bind:chatInputValue={chatInputValue} messages={messages} onChatMessage={handleChatMessage} />
+    <section style="width: 100%;display: {chatActive ? 'block' : 'none'}">
+        <Chat subscribeToMessages={subscribeToMessages} sendMessage={sendWSMessage}/>
     </section>
 </main>
 
@@ -150,6 +138,10 @@
         padding: 1em;
         max-width: var(--width-content);
         margin: 0 auto;
+    }
+
+    nav {
+        margin-bottom: 1rem
     }
 
     ul {
