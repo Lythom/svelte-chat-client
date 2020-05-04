@@ -7,6 +7,8 @@
     import About from "./App/About.svelte";
     import LoginSubForms from "./App/LoginSubForms.svelte";
     import Room from "./components/Room.svelte";
+    import {fly} from 'svelte/transition';
+    import {quintOut} from 'svelte/easing';
 
     let feedback = '';
 
@@ -108,27 +110,37 @@
     <NavBar page={page} navigate={navigate} chatActive={chatActive} onLogout={logout}/>
 
     {#if page === '/'}
-        <Feedback feedback={feedback}/>
-        {#if !chatActive && !connecting}
-            <section>
-                <LoginSubForms updateFeedback={fb => feedback = fb} connectToChat={connectToChat}/>
-            </section>
-        {/if}
-        <section class:hide={!chatActive} style="width: 100%;">
-            <div class="chat" style="height: calc(100vh - 360px); width: calc(100% - 600px)">
-                <Chat subscribeToMessages={subscribeToMessages} sendMessage={sendWSMessage}/>
-            </div>
-            <aside class="room" style="width: 540px">
-                <Room subscribeToMessages={subscribeToMessages} sendMessage={sendWSMessage}/>
-            </aside>
-        </section>
+        <div in:fly="{{duration: 505, x: 0, y: -500, opacity: 0.2}}">
+            <Feedback feedback={feedback}/>
+            {#if !chatActive && !connecting}
+                <section in:fly="{{duration: 505, x: 0, y: -500, opacity: 0.2}}">
+                    <LoginSubForms updateFeedback={fb => feedback = fb} connectToChat={connectToChat}/>
+                </section>
+            {/if}
+            {#if chatActive}
+                <section class:hide={!chatActive} style="width: 100%;">
+                    <div class="chat" style="height: calc(100vh - 360px); width: calc(100% - 600px)"
+                         in:fly="{{duration: 505, x: 500, y: 0, opacity: 0.2}}">
+                        <Chat subscribeToMessages={subscribeToMessages} sendMessage={sendWSMessage}/>
+                    </div>
+                    <aside class="room" style="width: 540px"
+                           in:fly="{{duration: 505, x: 500, y: 0, opacity: 0.2, delay: 150}}">
+                        <Room subscribeToMessages={subscribeToMessages} sendMessage={sendWSMessage}/>
+                    </aside>
+                </section>
+            {/if}
+        </div>
     {/if}
 
     {#if page === '/page1'}
-        <Page1/>
+        <div in:fly="{{duration: 505, x: 0, y: -500, opacity: 0.2}}">
+            <Page1/>
+        </div>
     {/if}
     {#if page === '/about'}
-        <About/>
+        <div in:fly="{{duration: 505, x: 0, y: -500, opacity: 0.2}}">
+            <About/>
+        </div>
     {/if}
 </main>
 
@@ -140,10 +152,12 @@
         max-width: var(--width-content);
         margin: 0 auto;
     }
+
     .room {
         box-sizing: border-box;
         margin-top: 0;
     }
+
     .chat {
         box-sizing: border-box;
     }
