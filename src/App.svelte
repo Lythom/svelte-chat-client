@@ -74,7 +74,7 @@
     function subscribeToMessages(handler) {
         childChatHandler.push(handler)
         // a subcription function often return an unsubscription function. Alternatively an "unsubscribe" function can be provided in another way.
-        return () => childChatHandler.remove(handler)
+        return () => childChatHandler.filter(h => h !== handler)
     }
 
     //
