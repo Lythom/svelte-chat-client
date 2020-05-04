@@ -6,6 +6,7 @@
     import Page1 from "./App/Page1.svelte";
     import About from "./App/About.svelte";
     import LoginSubForms from "./App/LoginSubForms.svelte";
+    import Room from "./components/Room.svelte";
 
     let feedback = '';
 
@@ -113,8 +114,13 @@
                 <LoginSubForms updateFeedback={fb => feedback = fb} connectToChat={connectToChat}/>
             </section>
         {/if}
-        <section class:hide={!chatActive} style="width: 100%;" class="chat">
-            <Chat subscribeToMessages={subscribeToMessages} sendMessage={sendWSMessage}/>
+        <section class:hide={!chatActive} style="width: 100%;">
+            <div class="chat" style="height: calc(100vh - 360px); width: calc(100% - 600px)">
+                <Chat subscribeToMessages={subscribeToMessages} sendMessage={sendWSMessage}/>
+            </div>
+            <aside class="room" style="width: 540px">
+                <Room subscribeToMessages={subscribeToMessages} sendMessage={sendWSMessage}/>
+            </aside>
         </section>
     {/if}
 
@@ -134,12 +140,15 @@
         max-width: var(--width-content);
         margin: 0 auto;
     }
+    .room {
+        box-sizing: border-box;
+        margin-top: 0;
+    }
+    .chat {
+        box-sizing: border-box;
+    }
 
     .hide {
         display: none;
-    }
-
-    .chat {
-        height: calc(100vh - 360px);
     }
 </style>

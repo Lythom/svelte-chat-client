@@ -4,6 +4,10 @@ const WS_PROTOCOL = PROTOCOL === 'https:' ? 'wss:' : 'ws:';
 const API_SERVER = `${PROTOCOL}//${SERVER}`;
 const WS_SERVER = `${WS_PROTOCOL}//${SERVER}`;
 
+export const USERNAME_SEPARATOR = ' : '
+export const MSG_PREFIX = 'msg:'
+export const MOV_PREFIX = 'mov:'
+
 export async function startWebsocket(ticket, onMessage, onClose) {
     const ws = new WebSocket(WS_SERVER);
     return new Promise(((resolve) => ws.addEventListener('open', () => {

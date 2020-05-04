@@ -1,5 +1,6 @@
 <script>
     import {afterUpdate, beforeUpdate, onMount, onDestroy} from "svelte";
+    import {MSG_PREFIX, USERNAME_SEPARATOR} from "../api";
 
     export let sendMessage
     export let subscribeToMessages
@@ -19,13 +20,24 @@
     })
 
     function handleChatMessage() {
-        sendMessage(chatInputValue);
+        sendMessage(MSG_PREFIX + chatInputValue);
         chatInputValue = '';
         chatInput.focus();
     }
 
     function handleServerWSMessage(msg) {
-        messages = [...messages, msg.data];
+        let userMsg = msg.data.split(USERNAME_SEPARATOR)
+        if (userMsg.length === 1) {
+            // no user name, probably a server message
+            messages = [...messages, userMsg[0]]
+        } else if (userMsg.length >= 2) {
+            const user = userMsg[0]
+            // keep the message without the username
+            const text = msg.data.replace(userMsg[0] + USERNAME_SEPARATOR, '')
+            // only display the message if it's tag with prefix
+            if (!text.startsWith(MSG_PREFIX)) return
+            messages = [...messages, '[' + user + '] ' + text.replace(MSG_PREFIX, '')];
+        }
     }
 
     // from https://svelte.dev/tutorial/update
@@ -58,6 +70,7 @@
         flex-direction: column;
         height: 100%;
         width: 100%;
+        box-sizing: border-box;
     }
 
     .scrollable {
