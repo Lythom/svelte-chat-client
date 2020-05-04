@@ -12,9 +12,14 @@
 
     onMount(() => {
         unsubscribe = subscribeToMessages(handleServerWSMessage)
+        const storageusers = localStorage.getItem("users");
+        try {
+            if (storageusers != null) users = JSON.parse(storageusers)
+        } catch (_) {}
     })
 
     onDestroy(() => {
+        localStorage.setItem("users", JSON.stringify(users))
         if (unsubscribe != null) unsubscribe()
     })
 
@@ -72,5 +77,6 @@
         line-height: 20px;
         text-align: center;
         transition: transform 100ms linear;
+        position: absolute;
     }
 </style>

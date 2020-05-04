@@ -13,9 +13,14 @@
     onMount(() => {
         unsubscribe = subscribeToMessages(handleServerWSMessage)
         chatInput.focus()
+        const storagemessages = localStorage.getItem("messages");
+        try {
+            messages = JSON.parse(storagemessages)
+        } catch (_) {}
     })
 
     onDestroy(() => {
+        localStorage.setItem("messages", JSON.stringify(messages))
         if (unsubscribe != null) unsubscribe()
     })
 
