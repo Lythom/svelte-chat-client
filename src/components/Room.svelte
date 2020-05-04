@@ -1,6 +1,6 @@
 <script>
     import {onMount, onDestroy} from "svelte";
-    import {MOV_PREFIX, USERNAME_SEPARATOR} from "../api";
+    import {MOV_PREFIX, MSG_PREFIX, USERNAME_SEPARATOR} from "../api";
 
     export let sendMessage
     export let subscribeToMessages
@@ -15,7 +15,8 @@
         const storageusers = localStorage.getItem("users");
         try {
             if (storageusers != null) users = JSON.parse(storageusers)
-        } catch (_) {}
+        } catch (_) {
+        }
     })
 
     onDestroy(() => {
@@ -42,11 +43,31 @@
             // parse position
             const pos = text.split(',')
             if (pos.length !== 2) return
+            let quest = null
+            if (users[user] == null || users[user].quest == null) {
+                sendMessage(MSG_PREFIX + user + "! Approche du coin inférieur gauche, une quête t'attends !")
+                quest = 0
+            } else {
+                quest = users[user].quest
+                if (quest === 0 && pos[0] > 0 && pos[0] < 50 && pos[1] > 450 && pos[1] < 500) {
+                    quest++;
+                    sendMessage(MSG_PREFIX + user + "! Va chercher le colis situé au milieu à droite de la pièce pour moi veux-tu ?")
+                }
+                if (quest === 1 && pos[0] > 450 && pos[0] < 500 && pos[1] > 225 && pos[1] < 275) {
+                    quest++;
+                    sendMessage(MSG_PREFIX + user + "! Oui il est là ! Amène le moi s'il te plait.")
+                }
+                if (quest === 2 && pos[0] > 0 && pos[0] < 50 && pos[1] > 450 && pos[1] < 500) {
+                    quest++;
+                    sendMessage(MSG_PREFIX + user + "! J'espère que cette quête fedex t'a plus ;-)")
+                }
+            }
             users = {
                 ...users,
                 [user]: {
                     x: parseInt(pos[0]),
                     y: parseInt(pos[1]),
+                    quest
                 }
             }
         }
